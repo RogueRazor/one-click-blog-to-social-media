@@ -47,10 +47,10 @@ Publish once, post everywhere.
 
 ### Instagram
 
-1. Instagram posting uses the same Meta app system as Facebook. In your [Meta app](https://developers.facebook.com/), request the `instagram_basic` and `instagram_content_publish` permissions (plus `pages_show_list`, `pages_read_engagement`).
-2. Add the Instagram redirect URI shown on the plugin settings page under Valid OAuth Redirect URIs.
+1. Instagram uses the **same Meta app** as the Facebook section — no separate credentials needed. In your [Meta app](https://developers.facebook.com/), request the `instagram_basic` and `instagram_content_publish` permissions (plus `pages_show_list`, `pages_read_engagement`).
+2. Add the Instagram redirect URI shown on the plugin settings page under Valid OAuth Redirect URIs (it differs from the Facebook one).
 3. Your Instagram account must be a **Business or Creator** account linked to a Facebook Page.
-4. Enter the App ID and App Secret in the plugin, save, then click **Connect Instagram account**.
+4. With the Meta app configured in the Facebook section, click **Connect Instagram account**.
 5. Refresh accounts, pick the Instagram accounts to post to, and save.
 
 Note: Instagram feed posts require an image, so articles without a featured image (and no fallback image) are skipped. Links are not clickable on Instagram, so the article URL is appended to the caption.
