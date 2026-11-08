@@ -85,6 +85,16 @@ class OCSM_Admin {
 			exit;
 		}
 
+		if ( 'save_destinations' === $action ) {
+			check_admin_referer( 'ocsm_save_destinations' );
+			$enabled = isset( $_POST['ocsm_dest_enabled'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['ocsm_dest_enabled'] ) ) : array();
+			foreach ( OCSM_Providers::all() as $provider ) {
+				$provider->update_settings( array( 'enabled' => in_array( $provider->id(), $enabled, true ) ? 1 : 0 ) );
+			}
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=saved' ) );
+			exit;
+		}
+
 		if ( 'clear_log' === $action ) {
 			check_admin_referer( 'ocsm_clear_log' );
 			OCSM_Logger::clear();
@@ -135,6 +145,40 @@ class OCSM_Admin {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'One Click Blog to Social Media', 'one-click-blog-to-social-media' ); ?></h1>
+
+			<h2><?php esc_html_e( 'Destinations', 'one-click-blog-to-social-media' ); ?></h2>
+			<form method="post">
+				<?php wp_nonce_field( 'ocsm_save_destinations' ); ?>
+				<input type="hidden" name="ocsm_action" value="save_destinations" />
+				<table class="widefat striped" style="max-width:900px;">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'On', 'one-click-blog-to-social-media' ); ?></th>
+							<th><?php esc_html_e( 'Destination', 'one-click-blog-to-social-media' ); ?></th>
+							<th><?php esc_html_e( 'Status', 'one-click-blog-to-social-media' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( OCSM_Providers::all() as $provider ) : ?>
+							<tr>
+								<td><input type="checkbox" name="ocsm_dest_enabled[]" value="<?php echo esc_attr( $provider->id() ); ?>" <?php checked( $provider->enabled() ); ?> /></td>
+								<td><?php echo esc_html( $provider->icon() . ' ' . $provider->label() ); ?></td>
+								<td>
+									<?php if ( $provider->is_connected() ) : ?>
+										<span style="color:#00a32a;"><?php esc_html_e( 'Connected', 'one-click-blog-to-social-media' ); ?></span>
+									<?php else : ?>
+										<span style="color:#d63638;"><?php esc_html_e( 'Not connected', 'one-click-blog-to-social-media' ); ?></span>
+									<?php endif; ?>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<p class="description"><?php esc_html_e( 'Turn each destination on or off. The language and category filters below apply to every destination.', 'one-click-blog-to-social-media' ); ?></p>
+				<?php submit_button( __( 'Save destinations', 'one-click-blog-to-social-media' ) ); ?>
+			</form>
+
+			<hr />
 
 			<form method="post">
 				<?php wp_nonce_field( 'ocsm_save_global' ); ?>
