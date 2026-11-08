@@ -6,7 +6,7 @@ Publish once, post everywhere.
 
 ## Features
 
-- **One plugin, many destinations** — each destination (Google Business Profile, Facebook Pages, …) is a self-contained "provider" driver with its own credentials, connection, and targets.
+- **One plugin, many destinations** — each destination (Google Business Profile, Facebook Pages, Instagram, …) is a self-contained "provider" driver with its own credentials, connection, and targets.
 - **Automatic cross-posting** — when an article is published (including automatically by Soro or other tools), it is posted to every enabled, connected destination.
 - **Per-destination control** — enable or disable each destination independently; each has its own target list (Google Business locations, Facebook Pages).
 - **Language filter** — choose which language(s) may be posted. Articles in other languages are skipped. Uses Polylang / WPML assignments when available, otherwise automatic language detection.
@@ -45,14 +45,25 @@ Publish once, post everywhere.
 4. Enter the App ID and App Secret in the plugin, save, then click **Connect Facebook account**.
 5. Refresh Pages, pick the Pages to post to, and save.
 
+### Instagram
+
+1. Instagram posting uses the same Meta app system as Facebook. In your [Meta app](https://developers.facebook.com/), request the `instagram_basic` and `instagram_content_publish` permissions (plus `pages_show_list`, `pages_read_engagement`).
+2. Add the Instagram redirect URI shown on the plugin settings page under Valid OAuth Redirect URIs.
+3. Your Instagram account must be a **Business or Creator** account linked to a Facebook Page.
+4. Enter the App ID and App Secret in the plugin, save, then click **Connect Instagram account**.
+5. Refresh accounts, pick the Instagram accounts to post to, and save.
+
+Note: Instagram feed posts require an image, so articles without a featured image (and no fallback image) are skipped. Links are not clickable on Instagram, so the article URL is appended to the caption.
+
 ## Architecture (for contributors)
 
 Each destination is a driver class extending `OCSM_Provider` (see `includes/class-ocsm-provider.php`):
 
 - `includes/providers/class-ocsm-provider-google.php` — Google Business Profile
 - `includes/providers/class-ocsm-provider-facebook.php` — Facebook Pages
+- `includes/providers/class-ocsm-provider-instagram.php` — Instagram (Business/Creator accounts via the Facebook Graph API)
 
-To add a new platform (X/Twitter, LinkedIn, Bluesky, Instagram, …):
+To add a new platform (X/Twitter, LinkedIn, Bluesky, …):
 
 1. Create `includes/providers/class-ocsm-provider-{id}.php` implementing the abstract methods (`settings`, `is_connected`, `get_connect_url`, `exchange_code`, `get_targets`, `post`, `render_settings`, `handle_action`, …).
 2. Register it in `OCSM_Providers::all()` (`includes/class-ocsm-providers.php`).

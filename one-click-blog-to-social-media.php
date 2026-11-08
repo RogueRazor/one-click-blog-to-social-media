@@ -23,6 +23,7 @@ require_once OCSM_PLUGIN_DIR . 'includes/class-ocsm-provider.php';
 require_once OCSM_PLUGIN_DIR . 'includes/class-ocsm-providers.php';
 require_once OCSM_PLUGIN_DIR . 'includes/providers/class-ocsm-provider-google.php';
 require_once OCSM_PLUGIN_DIR . 'includes/providers/class-ocsm-provider-facebook.php';
+require_once OCSM_PLUGIN_DIR . 'includes/providers/class-ocsm-provider-instagram.php';
 require_once OCSM_PLUGIN_DIR . 'includes/class-ocsm-language.php';
 require_once OCSM_PLUGIN_DIR . 'includes/class-ocsm-logger.php';
 require_once OCSM_PLUGIN_DIR . 'includes/class-ocsm-post-sync.php';

@@ -13,6 +13,7 @@ class OCSM_Providers {
 			self::$instances = array(
 				'google'   => new OCSM_Provider_Google(),
 				'facebook' => new OCSM_Provider_Facebook(),
+				'instagram' => new OCSM_Provider_Instagram(),
 			);
 		}
 		return self::$instances;
