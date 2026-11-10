@@ -149,7 +149,9 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 			'timeout' => 30,
 		);
 		if ( null !== $body ) {
-			$body['access_token'] = $s['access_token'];
+			if ( empty( $body['access_token'] ) ) {
+				$body['access_token'] = $s['access_token'];
+			}
 			$args['body'] = $body;
 		} else {
 			$url = add_query_arg( 'access_token', rawurlencode( $s['access_token'] ), $url );
