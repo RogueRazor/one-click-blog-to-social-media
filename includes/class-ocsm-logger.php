@@ -10,6 +10,16 @@ class OCSM_Logger {
 	const MAX_ENTRIES = 100;
 
 	public static function log( $entry ) {
+		$entry = array_merge(
+			array(
+				'post_id' => 0,
+				'title'   => '',
+			),
+			$entry
+		);
+		if ( empty( $entry['title'] ) && ! empty( $entry['post_id'] ) ) {
+			$entry['title'] = get_the_title( (int) $entry['post_id'] );
+		}
 		$entries = get_option( self::OPTION, array() );
 		array_unshift( $entries, array_merge(
 			array(
