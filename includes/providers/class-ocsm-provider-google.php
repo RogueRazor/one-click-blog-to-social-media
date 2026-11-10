@@ -242,7 +242,7 @@ class OCSM_Provider_Google extends OCSM_Provider {
 			$this->update_settings( array(
 				'client_id'     => isset( $_POST['ocsm_google_client_id'] ) ? sanitize_text_field( wp_unslash( $_POST['ocsm_google_client_id'] ) ) : '',
 				'client_secret' => isset( $_POST['ocsm_google_client_secret'] ) ? sanitize_text_field( wp_unslash( $_POST['ocsm_google_client_secret'] ) ) : '',
-				'cta_type'      => isset( $_POST['ocsm_google_cta_type'] ) ? sanitize_key( wp_unslash( $_POST['ocsm_google_cta_type'] ) ) : 'LEARN_MORE',
+				'cta_type'      => isset( $_POST['ocsm_google_cta_type'] ) ? strtoupper( sanitize_key( wp_unslash( $_POST['ocsm_google_cta_type'] ) ) ) : 'LEARN_MORE',
 				'enabled'       => isset( $_POST['ocsm_google_enabled'] ) ? 1 : 0,
 			) );
 			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=saved' ) );
