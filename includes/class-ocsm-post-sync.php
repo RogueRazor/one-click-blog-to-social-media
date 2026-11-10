@@ -19,6 +19,10 @@ class OCSM_Post_Sync {
 				'allowed_languages' => array(),
 				'post_categories'   => array(),
 				'fallback_image_id' => 0,
+				'hashtag_always'    => '',
+				'hashtag_tags'      => 1,
+				'hashtag_categories' => 0,
+				'hashtag_max'       => 5,
 				'enabled'           => 1,
 			)
 		);
@@ -105,6 +109,7 @@ class OCSM_Post_Sync {
 			'url'           => get_permalink( $post_id ),
 			'image_url'     => self::get_image_url( $post_id, $settings ),
 			'language_code' => $lang ? $lang : get_locale(),
+			'hashtags'      => self::build_hashtags( $post_id, $settings ),
 		);
 
 		foreach ( $providers as $provider ) {
@@ -114,6 +119,46 @@ class OCSM_Post_Sync {
 			}
 			$provider->post( $post_id, $payload );
 		}
+	}
+
+	private static function build_hashtags( $post_id, $settings ) {
+		$tags = array();
+
+		if ( ! empty( $settings['hashtag_always'] ) ) {
+			foreach ( preg_split( '/[\s,]+/', trim( (string) $settings['hashtag_always'] ) ) as $word ) {
+				if ( '' !== $word ) {
+					$tags[] = ltrim( $word, '#' );
+				}
+			}
+		}
+
+		$auto = array();
+		if ( ! empty( $settings['hashtag_tags'] ) ) {
+			$auto = array_merge( $auto, wp_get_post_tags( $post_id, array( 'fields' => 'names' ) ) );
+		}
+		if ( ! empty( $settings['hashtag_categories'] ) ) {
+			$auto = array_merge( $auto, wp_get_post_categories( $post_id, array( 'fields' => 'names' ) ) );
+		}
+
+		$max = isset( $settings['hashtag_max'] ) ? max( 0, (int) $settings['hashtag_max'] ) : 5;
+		if ( $max ) {
+			$auto = array_slice( $auto, 0, $max );
+		}
+
+		foreach ( $auto as $name ) {
+			$tag = preg_replace( '/[^\p{L}\p{N}_]+/u', '', str_replace( ' ', '', (string) $name ) );
+			if ( '' !== $tag ) {
+				$tags[] = $tag;
+			}
+		}
+
+		$tags = array_unique( $tags );
+		if ( empty( $tags ) ) {
+			return '';
+		}
+		return implode( ' ', array_map( function ( $tag ) {
+			return '#' . $tag;
+		}, $tags ) );
 	}
 
 	private static function build_excerpt( $post ) {

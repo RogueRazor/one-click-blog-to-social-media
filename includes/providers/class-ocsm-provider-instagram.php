@@ -256,6 +256,9 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			$caption .= "\n\n" . $payload['excerpt'];
 		}
 		$caption .= "\n\n" . $payload['url'];
+		if ( ! empty( $payload['hashtags'] ) ) {
+			$caption .= "\n\n" . $payload['hashtags'];
+		}
 		if ( mb_strlen( $caption ) > 2200 ) {
 			$caption = mb_substr( $caption, 0, 2197 ) . '…';
 		}

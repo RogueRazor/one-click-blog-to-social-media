@@ -245,6 +245,9 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 		if ( ! empty( $payload['excerpt'] ) ) {
 			$message .= "\n\n" . $payload['excerpt'];
 		}
+		if ( ! empty( $payload['hashtags'] ) ) {
+			$message .= "\n\n" . $payload['hashtags'];
+		}
 
 		$success = array();
 		$errors  = array();

@@ -78,6 +78,10 @@ class OCSM_Admin {
 				'allowed_languages' => isset( $_POST['ocsm_languages'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['ocsm_languages'] ) ) : array(),
 				'post_categories'   => isset( $_POST['ocsm_categories'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['ocsm_categories'] ) ) : array(),
 				'fallback_image_id' => isset( $_POST['ocsm_fallback_image_id'] ) ? absint( wp_unslash( $_POST['ocsm_fallback_image_id'] ) ) : 0,
+				'hashtag_always'    => isset( $_POST['ocsm_hashtag_always'] ) ? sanitize_text_field( wp_unslash( $_POST['ocsm_hashtag_always'] ) ) : '',
+				'hashtag_tags'      => isset( $_POST['ocsm_hashtag_tags'] ) ? 1 : 0,
+				'hashtag_categories' => isset( $_POST['ocsm_hashtag_categories'] ) ? 1 : 0,
+				'hashtag_max'       => isset( $_POST['ocsm_hashtag_max'] ) ? absint( wp_unslash( $_POST['ocsm_hashtag_max'] ) ) : 5,
 				'enabled'           => isset( $_POST['ocsm_enabled'] ) ? 1 : 0,
 			);
 			update_option( 'ocsm_settings', array_merge( $settings, $new ) );
@@ -128,6 +132,10 @@ class OCSM_Admin {
 			'allowed_languages' => array(),
 			'post_categories'   => array(),
 			'fallback_image_id' => 0,
+			'hashtag_always'    => '',
+			'hashtag_tags'      => 1,
+			'hashtag_categories' => 0,
+			'hashtag_max'       => 5,
 			'enabled'           => 1,
 		) );
 		$messages = self::messages();
@@ -225,6 +233,31 @@ class OCSM_Admin {
 							<p class="description"><?php esc_html_e( 'Media library attachment ID used when an article has no featured image. Leave 0 for text-only posts.', 'one-click-blog-to-social-media' ); ?></p>
 						</td>
 					</tr>
+						<tr>
+							<th scope="row"><label for="ocsm_hashtag_always"><?php esc_html_e( 'Always include these hashtags', 'one-click-blog-to-social-media' ); ?></label></th>
+							<td>
+								<input type="text" class="regular-text" id="ocsm_hashtag_always" name="ocsm_hashtag_always" value="<?php echo esc_attr( $settings['hashtag_always'] ); ?>" placeholder="#RogueRazor" />
+								<p class="description"><?php esc_html_e( 'Space- or comma-separated. Added to every Facebook and Instagram post, e.g. your business name.', 'one-click-blog-to-social-media' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Automatic hashtags', 'one-click-blog-to-social-media' ); ?></th>
+							<td>
+								<label style="display:block;">
+									<input type="checkbox" name="ocsm_hashtag_tags" <?php checked( ! empty( $settings['hashtag_tags'] ) ); ?> />
+									<?php esc_html_e( "From the article's tags", 'one-click-blog-to-social-media' ); ?>
+								</label>
+								<label style="display:block;">
+									<input type="checkbox" name="ocsm_hashtag_categories" <?php checked( ! empty( $settings['hashtag_categories'] ) ); ?> />
+									<?php esc_html_e( "From the article's categories", 'one-click-blog-to-social-media' ); ?>
+								</label>
+								<label style="display:block;margin-top:6px;">
+									<?php esc_html_e( 'Maximum automatic hashtags:', 'one-click-blog-to-social-media' ); ?>
+									<input type="number" min="0" max="30" name="ocsm_hashtag_max" value="<?php echo esc_attr( $settings['hashtag_max'] ); ?>" style="width:70px;" />
+								</label>
+								<p class="description"><?php esc_html_e( 'Added to Facebook and Instagram posts. Google Business Profile posts stay hashtag-free.', 'one-click-blog-to-social-media' ); ?></p>
+							</td>
+						</tr>
 				</table>
 				<?php submit_button( __( 'Save general settings', 'one-click-blog-to-social-media' ) ); ?>
 			</form>
