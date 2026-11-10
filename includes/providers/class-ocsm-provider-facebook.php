@@ -90,7 +90,7 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 				array(
 					'client_id'     => $s['app_id'],
 					'client_secret' => $s['app_secret'],
-					'redirect_uri'  => $this->redirect_uri(),
+					'redirect_uri'  => rawurlencode( $this->redirect_uri() ),
 					'code'          => $code,
 				),
 				self::TOKEN_URL
