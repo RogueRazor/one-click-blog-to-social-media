@@ -8,7 +8,7 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 
 	const GRAPH_VERSION = 'v21.0';
 	const AUTH_URL       = 'https://www.facebook.com/' . self::GRAPH_VERSION . '/dialog/oauth';
-	const TOKEN_URL      = 'https://graph.facebook.com/' . self::GRAPH_VERSION . '/oauth/token';
+	const TOKEN_URL      = 'https://graph.facebook.com/' . self::GRAPH_VERSION . '/oauth/access_token';
 	const GRAPH_BASE     = 'https://graph.facebook.com/' . self::GRAPH_VERSION;
 	const SCOPE          = 'pages_show_list,pages_manage_posts,pages_read_engagement';
 
@@ -88,18 +88,14 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 		$response = wp_remote_get(
 			add_query_arg(
 				array(
-					'client_id'    => $s['app_id'],
-					'redirect_uri' => rawurlencode( $this->redirect_uri() ),
-					'code'         => $code,
+					'client_id'     => $s['app_id'],
+					'client_secret' => $s['app_secret'],
+					'redirect_uri'  => rawurlencode( $this->redirect_uri() ),
+					'code'          => $code,
 				),
 				self::TOKEN_URL
 			),
-			array(
-				'timeout' => 30,
-				'headers' => array(
-					'Authorization' => 'Basic ' . base64_encode( $s['app_id'] . ':' . $s['app_secret'] ),
-				),
-			)
+			array( 'timeout' => 30 )
 		);
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -114,16 +110,13 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 			add_query_arg(
 				array(
 					'grant_type'        => 'fb_exchange_token',
+					'client_id'         => $s['app_id'],
+					'client_secret'     => $s['app_secret'],
 					'fb_exchange_token' => $body['access_token'],
 				),
 				self::TOKEN_URL
 			),
-			array(
-				'timeout' => 30,
-				'headers' => array(
-					'Authorization' => 'Basic ' . base64_encode( $s['app_id'] . ':' . $s['app_secret'] ),
-				),
-			)
+			array( 'timeout' => 30 )
 		);
 		if ( ! is_wp_error( $long_response ) ) {
 			$long_body = json_decode( wp_remote_retrieve_body( $long_response ), true );
