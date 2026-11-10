@@ -94,14 +94,18 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 		$response = wp_remote_get(
 			add_query_arg(
 				array(
-					'client_id'     => $s['app_id'],
-					'client_secret' => $s['app_secret'],
-					'redirect_uri'  => rawurlencode( $this->redirect_uri() ),
-					'code'          => $code,
+					'client_id'    => $s['app_id'],
+					'redirect_uri' => rawurlencode( $this->redirect_uri() ),
+					'code'         => $code,
 				),
 				self::TOKEN_URL
 			),
-			array( 'timeout' => 30 )
+			array(
+				'timeout' => 30,
+				'headers' => array(
+					'Authorization' => 'Basic ' . base64_encode( $s['app_id'] . ':' . $s['app_secret'] ),
+				),
+			)
 		);
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -116,13 +120,16 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			add_query_arg(
 				array(
 					'grant_type'        => 'fb_exchange_token',
-					'client_id'         => $s['app_id'],
-					'client_secret'     => $s['app_secret'],
 					'fb_exchange_token' => $body['access_token'],
 				),
 				self::TOKEN_URL
 			),
-			array( 'timeout' => 30 )
+			array(
+				'timeout' => 30,
+				'headers' => array(
+					'Authorization' => 'Basic ' . base64_encode( $s['app_id'] . ':' . $s['app_secret'] ),
+				),
+			)
 		);
 		if ( ! is_wp_error( $long_response ) ) {
 			$long_body = json_decode( wp_remote_retrieve_body( $long_response ), true );
