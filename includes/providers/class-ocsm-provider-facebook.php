@@ -179,6 +179,7 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 					$targets[] = array(
 						'id'    => $page['id'],
 						'title' => isset( $page['name'] ) ? $page['name'] : $page['id'],
+						'token' => isset( $page['access_token'] ) ? $page['access_token'] : '',
 					);
 				}
 			}
@@ -249,6 +250,13 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 			$message .= "\n\n" . $payload['hashtags'];
 		}
 
+		$page_tokens = array();
+		foreach ( (array) get_option( self::OPTION_TARGETS, array() ) as $page ) {
+			if ( ! empty( $page['id'] ) && ! empty( $page['token'] ) ) {
+				$page_tokens[ $page['id'] ] = $page['token'];
+			}
+		}
+
 		$success = array();
 		$errors  = array();
 		foreach ( $targets as $page_id ) {
@@ -256,6 +264,9 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 				'message' => $message,
 				'link'    => $payload['url'],
 			);
+			if ( ! empty( $page_tokens[ $page_id ] ) ) {
+				$body['access_token'] = $page_tokens[ $page_id ];
+			}
 			$response = $this->request( 'POST', '/' . $page_id . '/feed', $body );
 			if ( is_wp_error( $response ) ) {
 				$errors[ $page_id ] = $response->get_error_message();
