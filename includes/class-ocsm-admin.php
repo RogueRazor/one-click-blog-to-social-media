@@ -61,6 +61,13 @@ class OCSM_Admin {
 				wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=oauth_error&ocsm_err=' . rawurlencode( $result->get_error_message() ) ) );
 				exit;
 			}
+			$s = $provider->settings();
+			OCSM_Logger::log( array(
+				'status'   => 'success',
+				'provider' => $provider_id,
+				'title'    => 'OAuth connect',
+				'message'  => 'Connected via app ID ' . ( isset( $s['app_id'] ) ? $s['app_id'] : ( isset( $s['client_id'] ) ? $s['client_id'] : 'n/a' ) ) . '. Token stored.',
+			) );
 			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=oauth_success' ) );
 			exit;
 		}
