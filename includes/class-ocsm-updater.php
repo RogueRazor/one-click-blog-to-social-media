@@ -35,6 +35,13 @@ class OCSM_Updater {
 
 		$version = ltrim( $release['tag_name'], 'v' );
 		if ( ! $version || version_compare( OCSM_VERSION, $version, '>=' ) ) {
+			// Register as up to date so the plugin keeps its icon on the Plugins screen.
+			$transient->no_update[ self::plugin_basename() ] = (object) array(
+				'slug'        => self::PLUGIN_SLUG,
+				'plugin'      => self::plugin_basename(),
+				'new_version' => OCSM_VERSION,
+				'icons'       => self::icons(),
+			);
 			return $transient;
 		}
 
