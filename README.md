@@ -10,7 +10,7 @@ Publish once, post everywhere.
 - **Automatic cross-posting** — when an article is published (including automatically by Soro or other tools), it is posted to every enabled, connected destination.
 - **Per-destination control** — the Destinations panel lets you turn each network on or off without disconnecting it; each has its own target list (Google Business locations, Facebook Pages, Instagram accounts).
 - **Language filter** — choose which language(s) may be posted. Articles in other languages are skipped. Uses Polylang / WPML assignments when available, otherwise automatic language detection.
-- **Featured image reuse** — the article's featured image is reused where supported. Images are automatically resized/converted to meet Google's requirements (JPEG/PNG, min 400×300, max 5 MB). Optional fallback image.
+- **Multi-image posts** — all images in the article (featured image first, then images in the content, in order) are sent along: Instagram carousels (up to 20 images), Facebook multi-photo posts (up to 10), and the featured image for Google Business Profile. Every image is automatically converted/resized to a platform-safe JPEG (max 1440px wide, max 5 MB).
 - **Category filter** — optionally limit cross-posting to selected categories.
 - **Hashtags** — optional always-on hashtags (e.g. your business name) plus automatic hashtags generated from the article's tags and/or categories, with a maximum count. Applied to Facebook and Instagram posts.
 - **Posting log** — one unified log showing exactly what was posted to which destination, skipped (and why), or failed. OAuth connects are logged too, including which app ID was used.

@@ -248,9 +248,18 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			return;
 		}
 
-		if ( empty( $payload['image_url'] ) ) {
+		$images = isset( $payload['image_urls'] ) ? array_filter( (array) $payload['image_urls'] ) : array();
+		if ( empty( $images ) && ! empty( $payload['image_url'] ) ) {
+			$images = array( $payload['image_url'] );
+		}
+		if ( empty( $images ) ) {
 			$this->log( array( 'post_id' => $post_id, 'status' => 'skipped', 'message' => __( 'Instagram requires an image; the article has no featured image and no fallback image is set.', 'one-click-blog-to-social-media' ) ) );
 			return;
+		}
+
+		$carousel = count( $images ) > 1;
+		if ( $carousel ) {
+			$images = array_slice( $images, 0, 20 ); // Instagram carousel limit.
 		}
 
 		$caption = $payload['title'];
@@ -268,72 +277,128 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 		$success = array();
 		$errors  = array();
 		foreach ( $targets as $ig_user_id ) {
-			$container = $this->request( 'POST', '/' . $ig_user_id . '/media', array(
-				'image_url' => $payload['image_url'],
-				'caption'   => $caption,
-			) );
-			if ( is_wp_error( $container ) ) {
-				$errors[ $ig_user_id ] = $container->get_error_message();
-				continue;
-			}
-			if ( empty( $container['id'] ) ) {
-				$errors[ $ig_user_id ] = __( 'No media container returned.', 'one-click-blog-to-social-media' );
-				continue;
-			}
+			$container_id = '';
+			$failure      = '';
 
-			// Wait for the container to finish processing before publishing.
-			$ready = false;
-			for ( $i = 0; $i < 5; $i++ ) {
-				sleep( 3 );
-				$status = $this->request( 'GET', '/' . $container['id'] . '?fields=status_code' );
-				if ( is_wp_error( $status ) ) {
-					break;
+			if ( $carousel ) {
+				// Create a child container per image, then a carousel container.
+				$children = array();
+				foreach ( $images as $image_url ) {
+					$child = $this->request( 'POST', '/' . $ig_user_id . '/media', array(
+						'image_url'         => $image_url,
+						'is_carousel_item'  => 'true',
+					) );
+					if ( is_wp_error( $child ) ) {
+						$failure = $child->get_error_message();
+						break;
+					}
+					if ( empty( $child['id'] ) ) {
+						$failure = __( 'No media container returned for a carousel image.', 'one-click-blog-to-social-media' );
+						break;
+					}
+					$children[] = $child['id'];
 				}
-				$code = isset( $status['status_code'] ) ? $status['status_code'] : '';
-				if ( 'FINISHED' === $code ) {
-					$ready = true;
-					break;
-				}
-				if ( 'ERROR' === $code || 'EXPIRED' === $code ) {
-					$errors[ $ig_user_id ] = sprintf( __( 'Media container status: %s', 'one-click-blog-to-social-media' ), $code );
-					break;
-				}
-			}
-			if ( ! empty( $errors[ $ig_user_id ] ) ) {
-				continue;
-			}
-			if ( ! $ready ) {
-				$errors[ $ig_user_id ] = __( 'Media not ready in time; try again in a minute.', 'one-click-blog-to-social-media' );
-				continue;
-			}
 
-			$publish = $this->request( 'POST', '/' . $ig_user_id . '/media_publish', array(
-				'creation_id' => $container['id'],
-			) );
-			if ( is_wp_error( $publish ) ) {
-				$errors[ $ig_user_id ] = $publish->get_error_message();
-			} elseif ( ! empty( $publish['id'] ) ) {
-				$success[] = $ig_user_id;
-				update_post_meta( $post_id, '_ocsm_instagram_post_id_' . $ig_user_id, $publish['id'] );
+				if ( ! $failure ) {
+					foreach ( $children as $child_id ) {
+						$failure = $this->wait_for_container( $child_id );
+						if ( $failure ) {
+							break;
+						}
+					}
+				}
+
+				if ( ! $failure ) {
+					$container = $this->request( 'POST', '/' . $ig_user_id . '/media', array(
+						'media_type' => 'CAROUSEL',
+						'children'   => implode( ',', $children ),
+						'caption'    => $caption,
+					) );
+					if ( is_wp_error( $container ) ) {
+						$failure = $container->get_error_message();
+					} elseif ( empty( $container['id'] ) ) {
+						$failure = __( 'No carousel container returned.', 'one-click-blog-to-social-media' );
+					} else {
+						$container_id = $container['id'];
+					}
+				}
 			} else {
-				$errors[ $ig_user_id ] = __( 'Unknown API response.', 'one-click-blog-to-social-media' );
+				$container = $this->request( 'POST', '/' . $ig_user_id . '/media', array(
+					'image_url' => $images[0],
+					'caption'   => $caption,
+				) );
+				if ( is_wp_error( $container ) ) {
+					$failure = $container->get_error_message();
+				} elseif ( empty( $container['id'] ) ) {
+					$failure = __( 'No media container returned.', 'one-click-blog-to-social-media' );
+				} else {
+					$container_id = $container['id'];
+				}
+			}
+
+			if ( ! $failure && $container_id ) {
+				$failure = $this->wait_for_container( $container_id );
+			}
+
+			if ( ! $failure && $container_id ) {
+				$publish = $this->request( 'POST', '/' . $ig_user_id . '/media_publish', array(
+					'creation_id' => $container_id,
+				) );
+				if ( is_wp_error( $publish ) ) {
+					$failure = $publish->get_error_message();
+				} elseif ( ! empty( $publish['id'] ) ) {
+					$success[] = $ig_user_id;
+					update_post_meta( $post_id, '_ocsm_instagram_post_id_' . $ig_user_id, $publish['id'] );
+				} else {
+					$failure = __( 'Unknown API response.', 'one-click-blog-to-social-media' );
+				}
+			}
+
+			if ( $failure ) {
+				$errors[ $ig_user_id ] = $failure;
 			}
 		}
+
+		$description = $carousel
+			? sprintf( __( 'carousel with %d images', 'one-click-blog-to-social-media' ), count( $images ) )
+			: __( 'image post', 'one-click-blog-to-social-media' );
 
 		if ( $errors ) {
 			$this->log( array(
 				'post_id' => $post_id,
 				'status'  => 'error',
-				'message' => __( 'Instagram API error: ', 'one-click-blog-to-social-media' ) . implode( ' | ', $errors ),
+				'message' => __( 'Instagram API error (' . $description . '): ', 'one-click-blog-to-social-media' ) . implode( ' | ', $errors ),
 			) );
 		}
 		if ( $success ) {
 			$this->log( array(
 				'post_id' => $post_id,
 				'status'  => 'success',
-				'message' => sprintf( _n( 'Posted to %d account.', 'Posted to %d accounts.', count( $success ), 'one-click-blog-to-social-media' ), count( $success ) ),
+				'message' => sprintf( _n( 'Posted %s to %d account.', 'Posted %s to %d accounts.', count( $success ), 'one-click-blog-to-social-media' ), $description, count( $success ) ),
 			) );
 		}
+	}
+
+	/**
+	 * Wait until a media container reports FINISHED. Returns an empty
+	 * string on success, or an error message on failure/timeout.
+	 */
+	private function wait_for_container( $container_id ) {
+		for ( $i = 0; $i < 5; $i++ ) {
+			sleep( 3 );
+			$status = $this->request( 'GET', '/' . $container_id . '?fields=status_code' );
+			if ( is_wp_error( $status ) ) {
+				return $status->get_error_message();
+			}
+			$code = isset( $status['status_code'] ) ? $status['status_code'] : '';
+			if ( 'FINISHED' === $code ) {
+				return '';
+			}
+			if ( 'ERROR' === $code || 'EXPIRED' === $code ) {
+				return sprintf( __( 'Media container status: %s', 'one-click-blog-to-social-media' ), $code );
+			}
+		}
+		return __( 'Media not ready in time; try again in a minute.', 'one-click-blog-to-social-media' );
 	}
 
 	public function render_settings() {

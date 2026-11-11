@@ -108,6 +108,7 @@ class OCSM_Post_Sync {
 			'summary'       => trim( $post->post_title . "\n\n" . $excerpt ),
 			'url'           => get_permalink( $post_id ),
 			'image_url'     => self::get_image_url( $post_id, $settings ),
+			'image_urls'    => self::collect_image_urls( $post_id, $settings ),
 			'language_code' => $lang ? $lang : get_locale(),
 			'hashtags'      => self::build_hashtags( $post_id, $settings ),
 		);
@@ -182,18 +183,67 @@ class OCSM_Post_Sync {
 		if ( ! $attachment_id ) {
 			return '';
 		}
+		return self::prepare_attachment( $attachment_id );
+	}
+
+	/**
+	 * Collect every usable image for the article: featured image first,
+	 * then all images embedded in the content, in order. Each is converted
+	 * to a platform-safe JPEG (max width 1440, max 5 MB).
+	 */
+	private static function collect_image_urls( $post_id, $settings ) {
+		$ids = array();
+		$featured_id = get_post_thumbnail_id( $post_id );
+		if ( ! $featured_id && ! empty( $settings['fallback_image_id'] ) ) {
+			$featured_id = absint( $settings['fallback_image_id'] );
+		}
+		if ( $featured_id ) {
+			$ids[] = (int) $featured_id;
+		}
+
+		$post = get_post( $post_id );
+		if ( $post && preg_match_all( '/<img[^>]+src=[\'"]([^\'"]+)[\'"]/i', $post->post_content, $matches ) ) {
+			foreach ( $matches[1] as $src ) {
+				if ( 0 === strpos( $src, 'data:' ) ) {
+					continue;
+				}
+				$attachment_id = (int) attachment_url_to_postid( $src );
+				if ( $attachment_id && ! in_array( $attachment_id, $ids, true ) ) {
+					$ids[] = $attachment_id;
+				}
+			}
+		}
+
+		$urls = array();
+		foreach ( $ids as $attachment_id ) {
+			$url = self::prepare_attachment( $attachment_id );
+			if ( $url ) {
+				$urls[] = $url;
+			}
+		}
+		return $urls;
+	}
+
+	/**
+	 * Return a URL to a platform-safe version of the attachment: JPEG,
+	 * max width 1440px, max 5 MB (accepted by Google, Facebook, Instagram).
+	 * Returns the original URL when it already complies.
+	 */
+	private static function prepare_attachment( $attachment_id ) {
 		$file = get_attached_file( $attachment_id );
 		if ( ! $file || ! file_exists( $file ) ) {
-			return wp_get_attachment_url( $attachment_id );
+			$url = wp_get_attachment_url( $attachment_id );
+			return $url ? $url : '';
 		}
 		$check = wp_check_filetype( $file );
 		$ext   = strtolower( (string) $check['ext'] );
-		$needs_conversion = ! in_array( $ext, array( 'jpg', 'jpeg', 'png' ), true );
+		// Instagram only accepts JPEG; Google and Facebook accept it too.
+		$needs_conversion = ! in_array( $ext, array( 'jpg', 'jpeg' ), true );
 		$needs_resize = false;
 
 		if ( function_exists( 'getimagesize' ) ) {
 			$size = @getimagesize( $file );
-			if ( $size && ( $size[0] < 400 || $size[1] < 300 ) ) {
+			if ( $size && (int) $size[0] > 1440 ) {
 				$needs_resize = true;
 			}
 		}
@@ -201,28 +251,30 @@ class OCSM_Post_Sync {
 			$needs_resize = true;
 		}
 		if ( ! $needs_conversion && ! $needs_resize ) {
-			return wp_get_attachment_url( $attachment_id );
+			$url = wp_get_attachment_url( $attachment_id );
+			return $url ? $url : '';
 		}
 
 		$editor = wp_get_image_editor( $file );
 		if ( is_wp_error( $editor ) ) {
-			return wp_get_attachment_url( $attachment_id );
+			$url = wp_get_attachment_url( $attachment_id );
+			return $url ? $url : '';
 		}
-		if ( $needs_conversion ) {
-			$editor->set_quality( 85 );
-		}
-		if ( filesize( $file ) > 5 * MB_IN_BYTES ) {
-			$editor->resize( 1600, 1600, false );
+		$editor->set_quality( 85 );
+		if ( $needs_resize ) {
+			$editor->resize( 1440, 1440, false );
 		}
 		$upload = wp_upload_dir();
 		$target_dir = trailingslashit( $upload['basedir'] ) . 'ocsm';
 		if ( ! wp_mkdir_p( $target_dir ) ) {
-			return wp_get_attachment_url( $attachment_id );
+			$url = wp_get_attachment_url( $attachment_id );
+			return $url ? $url : '';
 		}
 		$target = $target_dir . '/ocsm-' . $attachment_id . '.jpg';
 		$result = $editor->save( $target, 'image/jpeg' );
 		if ( is_wp_error( $result ) || filesize( $result['path'] ) > 5 * MB_IN_BYTES ) {
-			return wp_get_attachment_url( $attachment_id );
+			$url = wp_get_attachment_url( $attachment_id );
+			return $url ? $url : '';
 		}
 		return trailingslashit( $upload['baseurl'] ) . 'ocsm/' . basename( $result['path'] );
 	}

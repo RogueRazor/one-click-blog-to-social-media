@@ -244,12 +244,22 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 			return;
 		}
 
+		$images = isset( $payload['image_urls'] ) ? array_filter( (array) $payload['image_urls'] ) : array();
+		$multi  = count( $images ) > 1;
+		if ( $multi ) {
+			$images = array_slice( $images, 0, 10 ); // Facebook multi-photo limit.
+		}
+
 		$message = $payload['title'];
 		if ( ! empty( $payload['excerpt'] ) ) {
 			$message .= "\n\n" . $payload['excerpt'];
 		}
 		if ( ! empty( $payload['hashtags'] ) ) {
 			$message .= "\n\n" . $payload['hashtags'];
+		}
+		if ( $multi ) {
+			// Photo posts do not render a link preview, so include the URL in the text.
+			$message .= "\n\n" . $payload['url'];
 		}
 
 		$page_tokens = array();
@@ -262,36 +272,84 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 		$success = array();
 		$errors  = array();
 		foreach ( $targets as $page_id ) {
-			$body = array(
-				'message' => $message,
-				'link'    => $payload['url'],
-			);
-			if ( ! empty( $page_tokens[ $page_id ] ) ) {
-				$body['access_token'] = $page_tokens[ $page_id ];
-			}
-			$response = $this->request( 'POST', '/' . $page_id . '/feed', $body );
-			if ( is_wp_error( $response ) ) {
-				$errors[ $page_id ] = $response->get_error_message();
-			} elseif ( ! empty( $response['id'] ) ) {
-				$success[] = $page_id;
-				update_post_meta( $post_id, '_ocsm_facebook_post_id_' . $page_id, $response['id'] );
+			$failure = '';
+
+			if ( $multi ) {
+				// Upload each image as an unpublished photo, then attach them all to one post.
+				$media_ids = array();
+				foreach ( $images as $image_url ) {
+					$photo_body = array(
+						'url'       => $image_url,
+						'published' => 'false',
+					);
+					if ( ! empty( $page_tokens[ $page_id ] ) ) {
+						$photo_body['access_token'] = $page_tokens[ $page_id ];
+					}
+					$photo = $this->request( 'POST', '/' . $page_id . '/photos', $photo_body );
+					if ( is_wp_error( $photo ) ) {
+						$failure = $photo->get_error_message();
+						break;
+					}
+					if ( empty( $photo['id'] ) ) {
+						$failure = __( 'No photo ID returned.', 'one-click-blog-to-social-media' );
+						break;
+					}
+					$media_ids[] = $photo['id'];
+				}
+
+				if ( ! $failure ) {
+					$body = array( 'message' => $message );
+					foreach ( $media_ids as $index => $media_id ) {
+						$body[ 'attached_media[' . $index . ']' ] = '{"media_fbid":"' . $media_id . '"}';
+					}
+					if ( ! empty( $page_tokens[ $page_id ] ) ) {
+						$body['access_token'] = $page_tokens[ $page_id ];
+					}
+					$response = $this->request( 'POST', '/' . $page_id . '/feed', $body );
+				}
 			} else {
-				$errors[ $page_id ] = __( 'Unknown API response.', 'one-click-blog-to-social-media' );
+				$body = array(
+					'message' => $message,
+					'link'    => $payload['url'],
+				);
+				if ( ! empty( $page_tokens[ $page_id ] ) ) {
+					$body['access_token'] = $page_tokens[ $page_id ];
+				}
+				$response = $this->request( 'POST', '/' . $page_id . '/feed', $body );
+			}
+
+			if ( ! $failure ) {
+				if ( is_wp_error( $response ) ) {
+					$failure = $response->get_error_message();
+				} elseif ( ! empty( $response['id'] ) ) {
+					$success[] = $page_id;
+					update_post_meta( $post_id, '_ocsm_facebook_post_id_' . $page_id, $response['id'] );
+				} else {
+					$failure = __( 'Unknown API response.', 'one-click-blog-to-social-media' );
+				}
+			}
+
+			if ( $failure ) {
+				$errors[ $page_id ] = $failure;
 			}
 		}
+
+		$description = $multi
+			? sprintf( __( '%d-photo post', 'one-click-blog-to-social-media' ), count( $images ) )
+			: __( 'link post', 'one-click-blog-to-social-media' );
 
 		if ( $errors ) {
 			$this->log( array(
 				'post_id' => $post_id,
 				'status'  => 'error',
-				'message' => __( 'Facebook API error: ', 'one-click-blog-to-social-media' ) . implode( ' | ', $errors ),
+				'message' => __( 'Facebook API error (' . $description . '): ', 'one-click-blog-to-social-media' ) . implode( ' | ', $errors ),
 			) );
 		}
 		if ( $success ) {
 			$this->log( array(
 				'post_id' => $post_id,
 				'status'  => 'success',
-				'message' => sprintf( _n( 'Posted to %d page.', 'Posted to %d pages.', count( $success ), 'one-click-blog-to-social-media' ), count( $success ) ),
+				'message' => sprintf( _n( 'Posted %s to %d page.', 'Posted %s to %d pages.', count( $success ), 'one-click-blog-to-social-media' ), $description, count( $success ) ),
 			) );
 		}
 	}
