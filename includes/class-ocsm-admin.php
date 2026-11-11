@@ -113,6 +113,13 @@ class OCSM_Admin {
 			exit;
 		}
 
+		if ( 'fill_seo' === $action ) {
+			check_admin_referer( 'ocsm_fill_seo' );
+			$filled = OCSM_SEO_Fill::fill_all();
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=seo_filled&filled=' . $filled . '&tab=general' ) );
+			exit;
+		}
+
 		if ( 'clear_log' === $action ) {
 			check_admin_referer( 'ocsm_clear_log' );
 			OCSM_Logger::clear();
@@ -132,6 +139,7 @@ class OCSM_Admin {
 		return array(
 			'saved'             => __( 'Settings saved.', 'one-click-blog-to-social-media' ),
 			'oauth_success'     => __( 'Account connected successfully.', 'one-click-blog-to-social-media' ),
+		'seo_filled'        => __( 'SEO fields filled for existing posts.', 'one-click-blog-to-social-media' ),
 			'oauth_error'       => __( 'Could not connect. Check your credentials and that the redirect URI matches exactly.', 'one-click-blog-to-social-media' ),
 			'oauth_failed'      => __( 'The provider returned no authorization code.', 'one-click-blog-to-social-media' ),
 			'disconnected'      => __( 'Account disconnected.', 'one-click-blog-to-social-media' ),
@@ -159,6 +167,9 @@ class OCSM_Admin {
 			$msg = $messages[ $key ];
 			if ( isset( $_GET['ocsm_err'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				$msg .= ' ' . sanitize_text_field( rawurldecode( wp_unslash( $_GET['ocsm_err'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			}
+			if ( isset( $_GET['filled'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$msg .= ' (' . absint( wp_unslash( $_GET['filled'] ) ) . ' fields updated.)'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			}
 			$error_keys = array( 'oauth_error', 'oauth_failed', 'targets_error' );
 			$class = in_array( $key, $error_keys, true ) ? 'notice-error' : 'notice-success';
@@ -295,6 +306,21 @@ class OCSM_Admin {
 				</table>
 				<?php submit_button( __( 'Save general settings', 'one-click-blog-to-social-media' ) ); ?>
 			</form>
+
+			<?php if ( 'general' === $current_tab ) : ?>
+			<hr />
+			<h2><?php esc_html_e( 'SEO field backfill', 'one-click-blog-to-social-media' ); ?></h2>
+			<p><?php esc_html_e( 'Fill empty Excerpt, SEO Title, and SEO Description fields for all existing posts, generated from each article\'s content. Existing values are never overwritten.', 'one-click-blog-to-social-media' ); ?></p>
+			<?php $seo_plugins = OCSM_SEO_Fill::seo_plugins(); ?>
+			<?php if ( empty( $seo_plugins ) ) : ?>
+				<p><em><?php esc_html_e( 'No SEO plugin detected — only the WordPress excerpt will be filled.', 'one-click-blog-to-social-media' ); ?></em></p>
+			<?php endif; ?>
+			<form method="post">
+				<?php wp_nonce_field( 'ocsm_fill_seo' ); ?>
+				<input type="hidden" name="ocsm_action" value="fill_seo" />
+				<?php submit_button( __( 'Fill empty SEO fields for existing posts', 'one-click-blog-to-social-media' ), 'secondary' ); ?>
+			</form>
+		<?php endif; ?>
 
 			<?php elseif ( 'log' !== $current_tab ) : ?>
 				<?php foreach ( OCSM_Providers::all() as $provider ) : ?>
