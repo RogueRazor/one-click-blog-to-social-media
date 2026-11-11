@@ -281,6 +281,32 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 				continue;
 			}
 
+			// Wait for the container to finish processing before publishing.
+			$ready = false;
+			for ( $i = 0; $i < 5; $i++ ) {
+				sleep( 3 );
+				$status = $this->request( 'GET', '/' . $container['id'] . '?fields=status_code' );
+				if ( is_wp_error( $status ) ) {
+					break;
+				}
+				$code = isset( $status['status_code'] ) ? $status['status_code'] : '';
+				if ( 'FINISHED' === $code ) {
+					$ready = true;
+					break;
+				}
+				if ( 'ERROR' === $code || 'EXPIRED' === $code ) {
+					$errors[ $ig_user_id ] = sprintf( __( 'Media container status: %s', 'one-click-blog-to-social-media' ), $code );
+					break;
+				}
+			}
+			if ( ! empty( $errors[ $ig_user_id ] ) ) {
+				continue;
+			}
+			if ( ! $ready ) {
+				$errors[ $ig_user_id ] = __( 'Media not ready in time; try again in a minute.', 'one-click-blog-to-social-media' );
+				continue;
+			}
+
 			$publish = $this->request( 'POST', '/' . $ig_user_id . '/media_publish', array(
 				'creation_id' => $container['id'],
 			) );
