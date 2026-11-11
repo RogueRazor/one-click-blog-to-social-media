@@ -36,6 +36,13 @@ class OCSM_Admin {
 			}
 
 			if ( ! isset( $_GET['code'] ) ) {
+				$err_desc = isset( $_GET['error_description'] ) ? sanitize_text_field( wp_unslash( $_GET['error_description'] ) ) : '';
+				OCSM_Logger::log( array(
+					'status'   => 'error',
+					'provider' => $provider_id,
+					'title'    => 'OAuth connect',
+					'message'  => 'No authorization code returned' . ( $err_desc ? ': ' . $err_desc : '.' ),
+				) );
 				wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=oauth_failed' ) );
 				exit;
 			}
