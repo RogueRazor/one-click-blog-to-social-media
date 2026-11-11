@@ -209,7 +209,7 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 				'app_secret' => isset( $_POST['ocsm_instagram_app_secret'] ) ? sanitize_text_field( wp_unslash( $_POST['ocsm_instagram_app_secret'] ) ) : '',
 				'enabled'    => isset( $_POST['ocsm_instagram_enabled'] ) ? 1 : 0,
 			) );
-			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=saved' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=saved&tab=' . $this->id() ) );
 			exit;
 		}
 
@@ -217,11 +217,11 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			check_admin_referer( 'ocsm_instagram_refresh' );
 			$targets = $this->get_targets();
 			if ( is_wp_error( $targets ) ) {
-				wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=targets_error&ocsm_err=' . rawurlencode( $targets->get_error_message() ) ) );
+				wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=targets_error&ocsm_err=' . rawurlencode( $targets->get_error_message() ) . '&tab=' . $this->id() ) );
 				exit;
 			}
 			update_option( self::OPTION_TARGETS, $targets );
-			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=targets_refreshed' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=targets_refreshed&tab=' . $this->id() ) );
 			exit;
 		}
 
@@ -229,14 +229,14 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			check_admin_referer( 'ocsm_instagram_targets' );
 			$selected = isset( $_POST['ocsm_instagram_targets'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['ocsm_instagram_targets'] ) ) : array();
 			$this->update_settings( array( 'targets' => array_values( array_filter( $selected ) ) ) );
-			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=saved' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=saved&tab=' . $this->id() ) );
 			exit;
 		}
 
 		if ( 'instagram_disconnect' === $action ) {
 			check_admin_referer( 'ocsm_instagram_disconnect' );
 			$this->disconnect();
-			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=disconnected' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=disconnected&tab=' . $this->id() ) );
 			exit;
 		}
 	}

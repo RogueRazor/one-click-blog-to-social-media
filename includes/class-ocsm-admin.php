@@ -99,7 +99,7 @@ class OCSM_Admin {
 				'enabled'           => isset( $_POST['ocsm_enabled'] ) ? 1 : 0,
 			);
 			update_option( 'ocsm_settings', array_merge( $settings, $new ) );
-			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=saved' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=saved&tab=general' ) );
 			exit;
 		}
 
@@ -109,14 +109,14 @@ class OCSM_Admin {
 			foreach ( OCSM_Providers::all() as $provider ) {
 				$provider->update_settings( array( 'enabled' => in_array( $provider->id(), $enabled, true ) ? 1 : 0 ) );
 			}
-			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=saved' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=saved&tab=general' ) );
 			exit;
 		}
 
 		if ( 'clear_log' === $action ) {
 			check_admin_referer( 'ocsm_clear_log' );
 			OCSM_Logger::clear();
-			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=log_cleared' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&ocsm_msg=log_cleared&tab=log' ) );
 			exit;
 		}
 
@@ -168,6 +168,26 @@ class OCSM_Admin {
 		<div class="wrap">
 			<h1><?php esc_html_e( 'One Click Blog to Social Media', 'one-click-blog-to-social-media' ); ?></h1>
 
+			<?php
+			$current_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$tabs = array( 'general' => __( 'General', 'one-click-blog-to-social-media' ) );
+			foreach ( OCSM_Providers::all() as $tab_provider ) {
+				$tabs[ $tab_provider->id() ] = $tab_provider->icon() . ' ' . $tab_provider->label();
+			}
+			$tabs['log'] = __( 'Log', 'one-click-blog-to-social-media' );
+			if ( ! isset( $tabs[ $current_tab ] ) ) {
+				$current_tab = 'general';
+			}
+			$base_url = admin_url( 'admin.php?page=' . self::PAGE_SLUG );
+			?>
+			<nav class="nav-tab-wrapper">
+				<?php foreach ( $tabs as $tab_id => $tab_label ) : ?>
+				<a class="nav-tab<?php echo $current_tab === $tab_id ? ' nav-tab-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'tab', $tab_id, $base_url ) ); ?>"><?php echo esc_html( $tab_label ); ?></a>
+				<?php endforeach; ?>
+			</nav>
+			<br />
+
+			<?php if ( 'general' === $current_tab ) : ?>
 			<h2><?php esc_html_e( 'Destinations', 'one-click-blog-to-social-media' ); ?></h2>
 			<form method="post">
 				<?php wp_nonce_field( 'ocsm_save_destinations' ); ?>
@@ -276,13 +296,13 @@ class OCSM_Admin {
 				<?php submit_button( __( 'Save general settings', 'one-click-blog-to-social-media' ) ); ?>
 			</form>
 
-			<hr />
-
-			<?php foreach ( OCSM_Providers::all() as $provider ) : ?>
-				<?php $provider->render_settings(); ?>
-				<hr />
-			<?php endforeach; ?>
-
+			<?php elseif ( 'log' !== $current_tab ) : ?>
+				<?php foreach ( OCSM_Providers::all() as $provider ) : ?>
+					<?php if ( $current_tab === $provider->id() ) : ?>
+						<?php $provider->render_settings(); ?>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			<?php else : ?>
 			<h2><?php esc_html_e( 'Posting log', 'one-click-blog-to-social-media' ); ?></h2>
 			<form method="post">
 				<?php wp_nonce_field( 'ocsm_clear_log' ); ?>
@@ -326,6 +346,7 @@ class OCSM_Admin {
 					<?php endif; ?>
 				</tbody>
 			</table>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
