@@ -10,7 +10,7 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 	const AUTH_URL       = 'https://www.facebook.com/' . self::GRAPH_VERSION . '/dialog/oauth';
 	const TOKEN_URL      = 'https://graph.facebook.com/' . self::GRAPH_VERSION . '/oauth/access_token';
 	const GRAPH_BASE     = 'https://graph.facebook.com/' . self::GRAPH_VERSION;
-	const SCOPE          = 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement';
+	const SCOPE          = 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management';
 
 	const OPTION_SETTINGS = 'ocsm_instagram_settings';
 	const OPTION_TARGETS  = 'ocsm_instagram_accounts';
