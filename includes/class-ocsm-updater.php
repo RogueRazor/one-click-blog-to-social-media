@@ -52,6 +52,7 @@ class OCSM_Updater {
 			'new_version' => $version,
 			'package'     => $package,
 			'url'         => 'https://github.com/' . self::REPO,
+			'icons'       => self::icons(),
 		);
 
 		return $transient;
@@ -95,7 +96,16 @@ class OCSM_Updater {
 				'description' => 'Automatically cross-posts published articles to Google Business Profile and social media.',
 				'changelog'   => isset( $release['body'] ) ? $release['body'] : '',
 			),
+			'icons'         => self::icons(),
 			'download_link' => $release['zipball_url'],
+		);
+	}
+
+	private static function icons() {
+		$base = 'https://raw.githubusercontent.com/' . self::REPO . '/main/assets/';
+		return array(
+			'1x' => $base . 'icon-128x128.png',
+			'2x' => $base . 'icon-256x256.png',
 		);
 	}
 
