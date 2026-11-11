@@ -245,7 +245,11 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 		}
 
 		$images = isset( $payload['image_urls'] ) ? array_filter( (array) $payload['image_urls'] ) : array();
-		$multi  = count( $images ) > 1;
+		$video_url = '';
+		if ( ! empty( $payload['video_urls'] ) ) {
+			$video_url = reset( $payload['video_urls'] );
+		}
+		$multi  = ! $video_url && count( $images ) > 1;
 		if ( $multi ) {
 			$images = array_slice( $images, 0, 10 ); // Facebook multi-photo limit.
 		}
@@ -274,7 +278,16 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 		foreach ( $targets as $page_id ) {
 			$failure = '';
 
-			if ( $multi ) {
+			if ( $video_url ) {
+				$video_body = array(
+					'file_url'   => $video_url,
+					'description' => $message . "\n\n" . $payload['url'],
+				);
+				if ( ! empty( $page_tokens[ $page_id ] ) ) {
+					$video_body['access_token'] = $page_tokens[ $page_id ];
+				}
+				$response = $this->request( 'POST', '/' . $page_id . '/videos', $video_body );
+			} elseif ( $multi ) {
 				// Upload each image as an unpublished photo, then attach them all to one post.
 				$media_ids = array();
 				foreach ( $images as $image_url ) {
@@ -334,9 +347,11 @@ class OCSM_Provider_Facebook extends OCSM_Provider {
 			}
 		}
 
-		$description = $multi
-			? sprintf( __( '%d-photo post', 'one-click-blog-to-social-media' ), count( $images ) )
-			: __( 'link post', 'one-click-blog-to-social-media' );
+		$description = $video_url
+			? __( 'video post', 'one-click-blog-to-social-media' )
+			: ( $multi
+				? sprintf( __( '%d-photo post', 'one-click-blog-to-social-media' ), count( $images ) )
+				: __( 'link post', 'one-click-blog-to-social-media' ) );
 
 		if ( $errors ) {
 			$this->log( array(

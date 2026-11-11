@@ -109,6 +109,8 @@ class OCSM_Post_Sync {
 			'url'           => get_permalink( $post_id ),
 			'image_url'     => self::get_image_url( $post_id, $settings ),
 			'image_urls'    => self::collect_image_urls( $post_id, $settings ),
+			'video_url'     => self::collect_video_urls( $post_id ),
+			'video_urls'    => self::collect_video_urls( $post_id ),
 			'language_code' => $lang ? $lang : get_locale(),
 			'hashtags'      => self::build_hashtags( $post_id, $settings ),
 		);
@@ -153,6 +155,17 @@ class OCSM_Post_Sync {
 			}
 		}
 
+		// Per-article hashtags approved in the post editor metabox.
+		$per_post = get_post_meta( $post_id, '_ocsm_hashtags', true );
+		if ( is_array( $per_post ) ) {
+			foreach ( $per_post as $name ) {
+				$tag = preg_replace( '/[^\p{L}\p{N}_]+/u', '', str_replace( ' ', '', ltrim( (string) $name, '#' ) ) );
+				if ( '' !== $tag ) {
+					$tags[] = $tag;
+				}
+			}
+		}
+
 		$tags = array_unique( $tags );
 		if ( empty( $tags ) ) {
 			return '';
@@ -173,6 +186,41 @@ class OCSM_Post_Sync {
 			$excerpt = mb_substr( $excerpt, 0, 1497 ) . '…';
 		}
 		return $excerpt;
+	}
+
+	/**
+	 * Collect MP4 videos embedded in the article content (video blocks,
+	 * source tags). Only local, publicly servable MP4 URLs are returned.
+	 */
+	private static function collect_video_urls( $post_id ) {
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return array();
+		}
+		$urls = array();
+		if ( preg_match_all( '/<video[^>]*\ssrc=[\'"]([^\'"]+)[\'"]/i', $post->post_content, $m ) ) {
+			foreach ( $m[1] as $url ) {
+				$urls[] = $url;
+			}
+		}
+		if ( preg_match_all( '/<source[^>]*\ssrc=[\'"]([^\'"]+)[\'"]/i', $post->post_content, $m ) ) {
+			foreach ( $m[1] as $url ) {
+				$urls[] = $url;
+			}
+		}
+		$out = array();
+		foreach ( $urls as $url ) {
+			if ( 0 === strpos( $url, 'data:' ) ) {
+				continue;
+			}
+			if ( false === stripos( $url, '.mp4' ) ) {
+				continue;
+			}
+			if ( ! in_array( $url, $out, true ) ) {
+				$out[] = $url;
+			}
+		}
+		return $out;
 	}
 
 	private static function get_image_url( $post_id, $settings ) {

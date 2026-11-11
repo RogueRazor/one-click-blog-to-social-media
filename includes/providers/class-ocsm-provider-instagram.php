@@ -257,7 +257,13 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			return;
 		}
 
-		$carousel = count( $images ) > 1;
+		$video_url = '';
+		if ( ! empty( $payload['video_urls'] ) ) {
+			// Videos publish as a Reel (shared to the feed as well). One reel per post.
+			$video_url = reset( $payload['video_urls'] );
+		}
+
+		$carousel = ! $video_url && count( $images ) > 1;
 		if ( $carousel ) {
 			$images = array_slice( $images, 0, 20 ); // Instagram carousel limit.
 		}
@@ -280,7 +286,21 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			$container_id = '';
 			$failure      = '';
 
-			if ( $carousel ) {
+			if ( $video_url ) {
+				$container = $this->request( 'POST', '/' . $ig_user_id . '/media', array(
+					'media_type'     => 'REELS',
+					'video_url'      => $video_url,
+					'caption'        => $caption,
+					'share_to_feed'  => 'true',
+				) );
+				if ( is_wp_error( $container ) ) {
+					$failure = $container->get_error_message();
+				} elseif ( empty( $container['id'] ) ) {
+					$failure = __( 'No reel container returned.', 'one-click-blog-to-social-media' );
+				} else {
+					$container_id = $container['id'];
+				}
+			} elseif ( $carousel ) {
 				// Create a child container per image, then a carousel container.
 				$children = array();
 				foreach ( $images as $image_url ) {
@@ -337,7 +357,7 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			}
 
 			if ( ! $failure && $container_id ) {
-				$failure = $this->wait_for_container( $container_id );
+				$failure = $this->wait_for_container( $container_id, $video_url ? 24 : 5, $video_url ? 5 : 3 );
 			}
 
 			if ( ! $failure && $container_id ) {
@@ -359,9 +379,11 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			}
 		}
 
-		$description = $carousel
-			? sprintf( __( 'carousel with %d images', 'one-click-blog-to-social-media' ), count( $images ) )
-			: __( 'image post', 'one-click-blog-to-social-media' );
+		$description = $video_url
+			? __( 'reel', 'one-click-blog-to-social-media' )
+			: ( $carousel
+				? sprintf( __( 'carousel with %d images', 'one-click-blog-to-social-media' ), count( $images ) )
+				: __( 'image post', 'one-click-blog-to-social-media' ) );
 
 		if ( $errors ) {
 			$this->log( array(
@@ -383,9 +405,9 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 	 * Wait until a media container reports FINISHED. Returns an empty
 	 * string on success, or an error message on failure/timeout.
 	 */
-	private function wait_for_container( $container_id ) {
-		for ( $i = 0; $i < 5; $i++ ) {
-			sleep( 3 );
+	private function wait_for_container( $container_id, $attempts = 5, $interval = 3 ) {
+		for ( $i = 0; $i < $attempts; $i++ ) {
+			sleep( $interval );
 			$status = $this->request( 'GET', '/' . $container_id . '?fields=status_code' );
 			if ( is_wp_error( $status ) ) {
 				return $status->get_error_message();

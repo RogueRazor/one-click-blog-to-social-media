@@ -13,6 +13,8 @@ Publish once, post everywhere.
 - **Multi-image posts** — all images in the article (featured image first, then images in the content, in order) are sent along: Instagram carousels (up to 20 images), Facebook multi-photo posts (up to 10), and the featured image for Google Business Profile. Every image is automatically converted/resized to a platform-safe JPEG (max 1440px wide, max 5 MB).
 - **Category filter** — optionally limit cross-posting to selected categories.
 - **Hashtags** — optional always-on hashtags (e.g. your business name) plus automatic hashtags generated from the article's tags and/or categories, with a maximum count. Applied to Facebook and Instagram posts.
+- **Per-article hashtag suggestions** — a sidebar metabox in the post editor suggests hashtags from the article's tags, categories, and keywords extracted from the content; tick the ones you want for that article. Custom hashtags can be added per article too.
+- **Video posts** — MP4 videos embedded in the article are published as an Instagram **Reel** (shared to the feed) and a Facebook Page **video post**, with the article link in the description. Google Business Profile posts keep the featured image and CTA link (Google's local-post video API is not used).
 - **Posting log** — one unified log showing exactly what was posted to which destination, skipped (and why), or failed. OAuth connects are logged too, including which app ID was used.
 - **Manual trigger** — a "Cross-post" row action on the posts list for immediate posting.
 - **Built-in updater** — updates are delivered via this repo's GitHub releases using WordPress's native update system.
