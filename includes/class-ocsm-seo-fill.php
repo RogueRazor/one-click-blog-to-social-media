@@ -52,6 +52,12 @@ class OCSM_SEO_Fill {
 				'desc'  => 'autodescription-description',
 			);
 		}
+		if ( defined( 'JETPACK__VERSION' ) || class_exists( 'Jetpack' ) ) {
+			$plugins['jetpack'] = array(
+				'title' => 'advanced_seo_title',
+				'desc'  => 'advanced_seo_description',
+			);
+		}
 
 		return $plugins;
 	}
