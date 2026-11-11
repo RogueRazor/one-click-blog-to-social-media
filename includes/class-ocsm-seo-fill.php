@@ -83,7 +83,7 @@ class OCSM_SEO_Fill {
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
 		}
-		if ( wp_is_post_revision( $post_id ) || wp_is_post_attachment( $post_id ) ) {
+		if ( wp_is_post_revision( $post_id ) ) {
 			return;
 		}
 		if ( ! $post ) {
