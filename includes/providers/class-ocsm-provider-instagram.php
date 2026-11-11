@@ -31,6 +31,8 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 		return wp_parse_args(
 			get_option( self::OPTION_SETTINGS, array() ),
 			array(
+				'app_id'        => '',
+				'app_secret'    => '',
 				'access_token'  => '',
 				'token_expires' => 0,
 				'targets'       => array(),
@@ -54,8 +56,8 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 	}
 
 	public function is_configured() {
-		$facebook = OCSM_Providers::get( 'facebook' );
-		return $facebook && $facebook->is_configured();
+		$s = $this->settings();
+		return ! empty( $s['app_id'] ) && ! empty( $s['app_secret'] );
 	}
 
 	public function is_connected() {
@@ -68,11 +70,10 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 	}
 
 	public function get_connect_url() {
-		$facebook = OCSM_Providers::get( 'facebook' );
-		if ( ! $facebook || ! $facebook->is_configured() ) {
+		if ( ! $this->is_configured() ) {
 			return '';
 		}
-		$s = $facebook->settings();
+		$s = $this->settings();
 		return add_query_arg(
 			array(
 				'client_id'     => $s['app_id'],
@@ -86,11 +87,10 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 	}
 
 	public function exchange_code( $code ) {
-		$facebook = OCSM_Providers::get( 'facebook' );
-		if ( ! $facebook || ! $facebook->is_configured() ) {
-			return new WP_Error( 'ocsm_not_configured', __( 'Configure the Meta app in the Facebook section first.', 'one-click-blog-to-social-media' ) );
+		if ( ! $this->is_configured() ) {
+			return new WP_Error( 'ocsm_not_configured', __( 'Enter the Meta App ID and App Secret first.', 'one-click-blog-to-social-media' ) );
 		}
-		$s = $facebook->settings();
+		$s = $this->settings();
 		$response = wp_remote_get(
 			add_query_arg(
 				array(
@@ -205,6 +205,8 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 		if ( 'instagram_save' === $action ) {
 			check_admin_referer( 'ocsm_instagram_save' );
 			$this->update_settings( array(
+				'app_id'     => isset( $_POST['ocsm_instagram_app_id'] ) ? sanitize_text_field( wp_unslash( $_POST['ocsm_instagram_app_id'] ) ) : '',
+				'app_secret' => isset( $_POST['ocsm_instagram_app_secret'] ) ? sanitize_text_field( wp_unslash( $_POST['ocsm_instagram_app_secret'] ) ) : '',
 				'enabled'    => isset( $_POST['ocsm_instagram_enabled'] ) ? 1 : 0,
 			) );
 			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=saved' ) );
@@ -317,19 +319,17 @@ class OCSM_Provider_Instagram extends OCSM_Provider {
 			<?php wp_nonce_field( 'ocsm_instagram_save' ); ?>
 			<input type="hidden" name="ocsm_action" value="instagram_save" />
 			<h2><?php echo esc_html( $this->icon() . ' ' . $this->label() ); ?></h2>
-			<p><?php esc_html_e( 'Instagram posts are published through the same Meta app as Facebook, to Instagram Business or Creator accounts linked to your Facebook Pages.', 'one-click-blog-to-social-media' ); ?></p>
+			<p><?php esc_html_e( 'Instagram posts are published through a Meta app, to Instagram Business or Creator accounts linked to your Facebook Pages.', 'one-click-blog-to-social-media' ); ?></p>
 			<p><?php esc_html_e( 'Redirect URI (add this in your Meta app settings under Valid OAuth Redirect URIs):', 'one-click-blog-to-social-media' ); ?></p>
 			<code><?php echo esc_html( $this->redirect_uri() ); ?></code>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Meta app', 'one-click-blog-to-social-media' ); ?></th>
-					<td>
-						<?php if ( $this->is_configured() ) : ?>
-							<p><?php esc_html_e( 'Using the Meta app configured in the Facebook section above.', 'one-click-blog-to-social-media' ); ?></p>
-						<?php else : ?>
-							<p style="color:#d63638;"><?php esc_html_e( 'Enter your Meta App ID and App Secret in the Facebook section above first.', 'one-click-blog-to-social-media' ); ?></p>
-						<?php endif; ?>
-					</td>
+					<th scope="row"><label for="ocsm_instagram_app_id"><?php esc_html_e( 'App ID', 'one-click-blog-to-social-media' ); ?></label></th>
+					<td><input type="text" class="regular-text" id="ocsm_instagram_app_id" name="ocsm_instagram_app_id" value="<?php echo esc_attr( $s['app_id'] ); ?>" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="ocsm_instagram_app_secret"><?php esc_html_e( 'App Secret', 'one-click-blog-to-social-media' ); ?></label></th>
+					<td><input type="password" class="regular-text" autocomplete="off" id="ocsm_instagram_app_secret" name="ocsm_instagram_app_secret" value="<?php echo esc_attr( $s['app_secret'] ); ?>" /></td>
 				</tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Connection', 'one-click-blog-to-social-media' ); ?></th>
