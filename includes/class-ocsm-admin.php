@@ -140,6 +140,8 @@ class OCSM_Admin {
 			'saved'             => __( 'Settings saved.', 'one-click-blog-to-social-media' ),
 			'oauth_success'     => __( 'Account connected successfully.', 'one-click-blog-to-social-media' ),
 		'seo_filled'        => __( 'SEO fields filled for existing posts.', 'one-click-blog-to-social-media' ),
+		'cross_post_queued' => __( 'Cross-post scheduled — it runs in the background. The log below shows progress and refreshes automatically.', 'one-click-blog-to-social-media' ),
+		'cross_post_pending' => __( 'A cross-post for this article is already running. Watch the log below.', 'one-click-blog-to-social-media' ),
 			'oauth_error'       => __( 'Could not connect. Check your credentials and that the redirect URI matches exactly.', 'one-click-blog-to-social-media' ),
 			'oauth_failed'      => __( 'The provider returned no authorization code.', 'one-click-blog-to-social-media' ),
 			'disconnected'      => __( 'Account disconnected.', 'one-click-blog-to-social-media' ),
@@ -174,7 +176,13 @@ class OCSM_Admin {
 			$error_keys = array( 'oauth_error', 'oauth_failed', 'targets_error' );
 			$class = in_array( $key, $error_keys, true ) ? 'notice-error' : 'notice-success';
 			echo '<div class="notice ' . esc_attr( $class ) . ' is-dismissible"><p>' . esc_html( $msg ) . '</p></div>';
-		}
+			}
+			if ( isset( $_GET['ocsm_msg'] ) && 'cross_post_queued' === $_GET['ocsm_msg'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$refresh_count = isset( $_GET['ocsm_r'] ) ? absint( $_GET['ocsm_r'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				if ( $refresh_count < 36 ) {
+					echo '<script>setTimeout(function(){var u=new URL(window.location.href);u.searchParams.set("ocsm_r",' . ( $refresh_count + 1 ) . ');window.location.href=u.href;},5000);</script>';
+				}
+			}
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'One Click Blog to Social Media', 'one-click-blog-to-social-media' ); ?></h1>

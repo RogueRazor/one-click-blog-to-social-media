@@ -10,6 +10,7 @@ class OCSM_Post_Sync {
 		add_action( 'transition_post_status', array( __CLASS__, 'on_transition' ), 10, 3 );
 		add_filter( 'post_row_actions', array( __CLASS__, 'row_action' ), 10, 2 );
 		add_action( 'admin_init', array( __CLASS__, 'handle_manual_post' ) );
+		add_action( 'ocsm_cross_post_event', array( __CLASS__, 'sync_post' ) );
 	}
 
 	private static function settings() {
@@ -38,7 +39,10 @@ class OCSM_Post_Sync {
 		if ( wp_is_post_revision( $post->ID ) || wp_is_post_autosave( $post->ID ) ) {
 			return;
 		}
-		self::sync_post( $post->ID );
+		// Run in the background so publishing never blocks on API processing.
+		if ( ! wp_next_scheduled( 'ocsm_cross_post_event', array( (int) $post->ID ) ) ) {
+			wp_schedule_single_event( time(), 'ocsm_cross_post_event', array( (int) $post->ID ) );
+		}
 	}
 
 	public static function row_action( $actions, $post ) {
@@ -58,8 +62,14 @@ class OCSM_Post_Sync {
 		}
 		$post_id = absint( $_GET['ocsm_sync_post'] );
 		check_admin_referer( 'ocsm_sync_' . $post_id );
-		self::sync_post( $post_id );
-		wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_synced=' . $post_id ) );
+
+		if ( wp_next_scheduled( 'ocsm_cross_post_event', array( $post_id ) ) ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=cross_post_pending&tab=log' ) );
+			exit;
+		}
+
+		wp_schedule_single_event( time(), 'ocsm_cross_post_event', array( $post_id ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=cross_post_queued&tab=log&ocsm_r=1' ) );
 		exit;
 	}
 
