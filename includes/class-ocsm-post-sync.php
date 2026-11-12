@@ -115,6 +115,17 @@ class OCSM_Post_Sync {
 			'hashtags'      => self::build_hashtags( $post_id, $settings ),
 		);
 
+		OCSM_Logger::log( array(
+			'post_id' => $post_id,
+			'title'   => get_the_title( $post_id ),
+			'status'  => 'info',
+			'message' => sprintf(
+				__( 'Collected %d image(s) and %d video(s) for cross-posting.', 'one-click-blog-to-social-media' ),
+				count( (array) $payload['image_urls'] ),
+				count( (array) $payload['video_urls'] )
+			),
+		) );
+
 		foreach ( $providers as $provider ) {
 			if ( ! $provider->is_connected() ) {
 				$provider->log( array( 'post_id' => $post_id, 'title' => get_the_title( $post_id ), 'status' => 'skipped', 'message' => sprintf( __( '%s account not connected.', 'one-click-blog-to-social-media' ), $provider->label() ) ) );
@@ -235,6 +246,52 @@ class OCSM_Post_Sync {
 	}
 
 	/**
+	 * Resolve an image URL (full-size, scaled, or any intermediate size)
+	 * to its attachment ID. Returns 0 when the URL is not a known attachment.
+	 */
+	private static function attachment_id_from_url( $url ) {
+		$url = (string) $url;
+		$id  = (int) attachment_url_to_postid( $url );
+		if ( $id ) {
+			return $id;
+		}
+
+		// Strip known WordPress size suffixes: -1024x768, -scaled, -e12.
+		$base = preg_replace( '/-(\d+x\d+|scaled|e\d+)(?=\.[a-zA-Z]{3,4}$)/', '', $url );
+		if ( $base && $base !== $url ) {
+			$id = (int) attachment_url_to_postid( $base );
+			if ( $id ) {
+				return $id;
+			}
+		}
+
+		// Last resort: look the attachment up by filename in the uploads meta.
+		$path = wp_parse_url( $base ? $base : $url, PHP_URL_PATH );
+		$filename = $path ? basename( $path ) : '';
+		if ( $filename ) {
+			$query = new WP_Query( array(
+				'post_type'      => 'attachment',
+				'post_status'    => 'inherit',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+				'meta_query'     => array(
+					array(
+						'key'     => '_wp_attached_file',
+						'value'   => $filename,
+						'compare' => 'LIKE',
+					),
+				),
+			) );
+			if ( ! empty( $query->posts ) ) {
+				return (int) $query->posts[0];
+			}
+		}
+
+		return 0;
+	}
+
+	/**
 	 * Collect every usable image for the article: featured image first,
 	 * then all images embedded in the content, in order. Each is converted
 	 * to a platform-safe JPEG (max width 1440, max 5 MB).
@@ -255,15 +312,7 @@ class OCSM_Post_Sync {
 				if ( 0 === strpos( $src, 'data:' ) ) {
 					continue;
 				}
-				$attachment_id = (int) attachment_url_to_postid( $src );
-				if ( ! $attachment_id ) {
-					// Scaled size URLs (photo-1024x768.jpg) do not resolve directly;
-					// retry with the full-size URL.
-					$full = preg_replace( '/-\d+x\d+(?=\.[a-zA-Z]{3,4}$)/', '', $src );
-					if ( $full && $full !== $src ) {
-						$attachment_id = (int) attachment_url_to_postid( $full );
-					}
-				}
+				$attachment_id = self::attachment_id_from_url( $src );
 				if ( $attachment_id && ! in_array( $attachment_id, $ids, true ) ) {
 					$ids[] = $attachment_id;
 				}
