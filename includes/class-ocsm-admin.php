@@ -179,8 +179,24 @@ class OCSM_Admin {
 			}
 			if ( isset( $_GET['ocsm_msg'] ) && 'cross_post_queued' === $_GET['ocsm_msg'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				$refresh_count = isset( $_GET['ocsm_r'] ) ? absint( $_GET['ocsm_r'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				if ( $refresh_count < 36 ) {
-					echo '<script>setTimeout(function(){var u=new URL(window.location.href);u.searchParams.set("ocsm_r",' . ( $refresh_count + 1 ) . ');window.location.href=u.href;},5000);</script>';
+				$queued_post_id = isset( $_GET['ocsm_post'] ) ? absint( $_GET['ocsm_post'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$still_running = $queued_post_id && wp_next_scheduled( 'ocsm_cross_post_event', array( $queued_post_id ) );
+				$refresh_js = $refresh_count < 36
+					? '<script>setTimeout(function(){var u=new URL(window.location.href);u.searchParams.set("ocsm_r",' . ( $refresh_count + 1 ) . ');window.location.href=u.href;},5000);</script>'
+					: '';
+				if ( $still_running ) {
+					echo '<div style="background:#fff;border-left:4px solid #72aee6;box-shadow:0 1px 1px rgba(0,0,0,.04);padding:16px 20px;margin:16px 0 0;display:flex;align-items:center;gap:14px;max-width:900px;">';
+					echo '<span class="spinner" style="float:none;margin:0;visibility:visible;"></span>';
+					echo '<div><strong>' . esc_html__( 'Cross-posting in the background…', 'one-click-blog-to-social-media' ) . '</strong><br />';
+					printf(
+						/* translators: %s: article title. */
+						esc_html__( 'The article %s is being published to Google, Facebook, and Instagram. This page refreshes automatically until it finishes — the results appear in the log below.', 'one-click-blog-to-social-media' ),
+						'<em>' . esc_html( $queued_post_id ? get_the_title( $queued_post_id ) : '' ) . '</em>'
+					);
+					echo '</div></div>';
+					echo $refresh_js;
+				} else {
+					echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Cross-post finished — see the results in the log below.', 'one-click-blog-to-social-media' ) . '</p></div>';
 				}
 			}
 		?>

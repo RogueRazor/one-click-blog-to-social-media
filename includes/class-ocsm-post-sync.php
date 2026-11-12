@@ -69,7 +69,7 @@ class OCSM_Post_Sync {
 		}
 
 		wp_schedule_single_event( time(), 'ocsm_cross_post_event', array( $post_id ) );
-		wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=cross_post_queued&tab=log&ocsm_r=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=one-click-blog-to-social-media&ocsm_msg=cross_post_queued&tab=log&ocsm_post=' . $post_id . '&ocsm_r=1' ) );
 		exit;
 	}
 
