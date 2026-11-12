@@ -307,14 +307,43 @@ class OCSM_Post_Sync {
 		}
 
 		$post = get_post( $post_id );
-		if ( $post && preg_match_all( '/<img[^>]+src=[\'"]([^\'"]+)[\'"]/i', $post->post_content, $matches ) ) {
-			foreach ( $matches[1] as $src ) {
-				if ( 0 === strpos( $src, 'data:' ) ) {
-					continue;
+		if ( $post ) {
+			$content = $post->post_content;
+
+			// 1. Gallery/image blocks: <!-- wp:gallery {"ids":[1,2,3]} -->
+			if ( preg_match_all( '/"ids":\[([0-9,\s]+)\]/', $content, $matches ) ) {
+				foreach ( $matches[1] as $list ) {
+					foreach ( explode( ',', $list ) as $id ) {
+						$id = (int) trim( $id );
+						if ( $id && ! in_array( $id, $ids, true ) ) {
+							$ids[] = $id;
+						}
+					}
 				}
-				$attachment_id = self::attachment_id_from_url( $src );
-				if ( $attachment_id && ! in_array( $attachment_id, $ids, true ) ) {
-					$ids[] = $attachment_id;
+			}
+
+			// 2. Classic gallery shortcodes: [gallery ids="1,2,3"]
+			if ( preg_match_all( '/\[gallery[^\]]*ids=[\'"]([0-9,\s]+)[\'"]/', $content, $matches ) ) {
+				foreach ( $matches[1] as $list ) {
+					foreach ( explode( ',', $list ) as $id ) {
+						$id = (int) trim( $id );
+						if ( $id && ! in_array( $id, $ids, true ) ) {
+							$ids[] = $id;
+						}
+					}
+				}
+			}
+
+			// 3. Inline image tags (image blocks, HTML galleries).
+			if ( preg_match_all( '/<img[^>]+src=[\'"]([^\'"]+)[\'"]/i', $content, $matches ) ) {
+				foreach ( $matches[1] as $src ) {
+					if ( 0 === strpos( $src, 'data:' ) ) {
+						continue;
+					}
+					$attachment_id = self::attachment_id_from_url( $src );
+					if ( $attachment_id && ! in_array( $attachment_id, $ids, true ) ) {
+						$ids[] = $attachment_id;
+					}
 				}
 			}
 		}
