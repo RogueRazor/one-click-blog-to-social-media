@@ -256,6 +256,14 @@ class OCSM_Post_Sync {
 					continue;
 				}
 				$attachment_id = (int) attachment_url_to_postid( $src );
+				if ( ! $attachment_id ) {
+					// Scaled size URLs (photo-1024x768.jpg) do not resolve directly;
+					// retry with the full-size URL.
+					$full = preg_replace( '/-\d+x\d+(?=\.[a-zA-Z]{3,4}$)/', '', $src );
+					if ( $full && $full !== $src ) {
+						$attachment_id = (int) attachment_url_to_postid( $full );
+					}
+				}
 				if ( $attachment_id && ! in_array( $attachment_id, $ids, true ) ) {
 					$ids[] = $attachment_id;
 				}
