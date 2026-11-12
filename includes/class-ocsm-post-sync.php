@@ -263,6 +263,14 @@ class OCSM_Post_Sync {
 			if ( $id ) {
 				return $id;
 			}
+			// Large originals are stored as name-scaled.jpg.
+			$scaled = preg_replace( '/(\.[a-zA-Z]{3,4})$/', '-scaled$1', $base );
+			if ( $scaled ) {
+				$id = (int) attachment_url_to_postid( $scaled );
+				if ( $id ) {
+					return $id;
+				}
+			}
 		}
 
 		// Last resort: look the attachment up by filename in the uploads meta.
@@ -334,13 +342,20 @@ class OCSM_Post_Sync {
 				}
 			}
 
-			// 3. Inline image tags (image blocks, HTML galleries).
-			if ( preg_match_all( '/<img[^>]+src=[\'"]([^\'"]+)[\'"]/i', $content, $matches ) ) {
-				foreach ( $matches[1] as $src ) {
-					if ( 0 === strpos( $src, 'data:' ) ) {
-						continue;
+			// 3. Inline image tags (image blocks, HTML galleries). The attachment
+			// ID is usually present in data-id or the wp-image-XXX class.
+			if ( preg_match_all( '/<img[^>]+>/i', $content, $matches ) ) {
+				foreach ( $matches[0] as $tag ) {
+					$attachment_id = 0;
+					if ( preg_match( '/data-id=[\'"](\d+)[\'"]/', $tag, $m ) ) {
+						$attachment_id = (int) $m[1];
 					}
-					$attachment_id = self::attachment_id_from_url( $src );
+					if ( ! $attachment_id && preg_match( '/wp-image-(\d+)/', $tag, $m ) ) {
+						$attachment_id = (int) $m[1];
+					}
+					if ( ! $attachment_id && preg_match( '/src=[\'"]([^\'"]+)[\'"]/', $tag, $m ) && 0 !== strpos( $m[1], 'data:' ) ) {
+						$attachment_id = self::attachment_id_from_url( $m[1] );
+					}
 					if ( $attachment_id && ! in_array( $attachment_id, $ids, true ) ) {
 						$ids[] = $attachment_id;
 					}
