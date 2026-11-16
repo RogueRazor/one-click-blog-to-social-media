@@ -96,6 +96,9 @@ class OCSM_Admin {
 				'hashtag_tags'      => isset( $_POST['ocsm_hashtag_tags'] ) ? 1 : 0,
 				'hashtag_categories' => isset( $_POST['ocsm_hashtag_categories'] ) ? 1 : 0,
 				'hashtag_max'       => isset( $_POST['ocsm_hashtag_max'] ) ? absint( wp_unslash( $_POST['ocsm_hashtag_max'] ) ) : 5,
+				'cta_enabled'       => isset( $_POST['ocsm_cta_enabled'] ) ? 1 : 0,
+				'cta_en'            => isset( $_POST['ocsm_cta_en'] ) ? wp_kses_post( wp_unslash( $_POST['ocsm_cta_en'] ) ) : '',
+				'cta_nl'            => isset( $_POST['ocsm_cta_nl'] ) ? wp_kses_post( wp_unslash( $_POST['ocsm_cta_nl'] ) ) : '',
 				'enabled'           => isset( $_POST['ocsm_enabled'] ) ? 1 : 0,
 			);
 			update_option( 'ocsm_settings', array_merge( $settings, $new ) );
@@ -302,6 +305,20 @@ class OCSM_Admin {
 							<p class="description"><?php esc_html_e( 'Media library attachment ID used when an article has no featured image. Leave 0 for text-only posts.', 'one-click-blog-to-social-media' ); ?></p>
 						</td>
 					</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Call to action', 'one-click-blog-to-social-media' ); ?></th>
+							<td>
+								<label style="display:block;">
+									<input type="checkbox" name="ocsm_cta_enabled" <?php checked( ! empty( $settings['cta_enabled'] ) ); ?> />
+									<?php esc_html_e( 'Append the call to action to posts automatically when they are published. Posts that already contain it are left alone.', 'one-click-blog-to-social-media' ); ?>
+								</label>
+								<p style="margin-top:8px;"><label><?php esc_html_e( 'English call to action (HTML allowed):', 'one-click-blog-to-social-media' ); ?></label><br />
+								<textarea class="large-text" rows="4" name="ocsm_cta_en"><?php echo esc_textarea( $settings['cta_en'] ); ?></textarea></p>
+								<p><label><?php esc_html_e( 'Dutch call to action (HTML allowed):', 'one-click-blog-to-social-media' ); ?></label><br />
+								<textarea class="large-text" rows="4" name="ocsm_cta_nl"><?php echo esc_textarea( $settings['cta_nl'] ); ?></textarea></p>
+								<p class="description"><?php esc_html_e( 'The CTA matching the article\'s language is appended to the end of the post on publish. Falls back to the other language when empty.', 'one-click-blog-to-social-media' ); ?></p>
+							</td>
+						</tr>
 						<tr>
 							<th scope="row"><label for="ocsm_hashtag_always"><?php esc_html_e( 'Always include these hashtags', 'one-click-blog-to-social-media' ); ?></label></th>
 							<td>

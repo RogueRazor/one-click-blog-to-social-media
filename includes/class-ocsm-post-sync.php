@@ -23,6 +23,9 @@ class OCSM_Post_Sync {
 				'hashtag_tags'      => 1,
 				'hashtag_categories' => 0,
 				'hashtag_max'       => 5,
+				'cta_enabled'       => 0,
+				'cta_en'            => '',
+				'cta_nl'            => '',
 				'enabled'           => 1,
 			)
 		);
@@ -38,7 +41,47 @@ class OCSM_Post_Sync {
 		if ( wp_is_post_revision( $post->ID ) || wp_is_post_autosave( $post->ID ) ) {
 			return;
 		}
+		self::maybe_append_cta( $post->ID );
 		self::sync_post( $post->ID );
+	}
+
+	/**
+	 * Append the configured call to action to a post when it is published,
+	 * matching the post's language. Skips posts that already contain it.
+	 */
+	private static function maybe_append_cta( $post_id ) {
+		$settings = self::settings();
+		if ( empty( $settings['cta_enabled'] ) ) {
+			return;
+		}
+
+		$lang = OCSM_Language::detect( $post_id );
+		$lang = $lang ? $lang : 'en';
+		$cta  = isset( $settings[ 'cta_' . $lang ] ) ? trim( (string) $settings[ 'cta_' . $lang ] ) : '';
+		if ( '' === $cta ) {
+			$cta = 'nl' === $lang ? trim( (string) $settings['cta_en'] ) : trim( (string) $settings['cta_nl'] );
+		}
+		if ( '' === $cta ) {
+			return;
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return;
+		}
+
+		// Skip if the exact CTA or its link is already in the content.
+		if ( false !== strpos( $post->post_content, $cta ) ) {
+			return;
+		}
+		if ( preg_match( '/href="([^"]+)"/', $cta, $match ) && false !== strpos( $post->post_content, $match[1] ) ) {
+			return;
+		}
+
+		wp_update_post( array(
+			'ID'           => $post_id,
+			'post_content' => rtrim( $post->post_content ) . "\n\n" . $cta,
+		) );
 	}
 
 	public static function row_action( $actions, $post ) {
