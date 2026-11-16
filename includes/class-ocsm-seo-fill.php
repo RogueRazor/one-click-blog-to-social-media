@@ -102,15 +102,26 @@ class OCSM_SEO_Fill {
 	public static function fill( $post ) {
 		$filled = 0;
 
+		// The language of the content decides whether existing fields are stale:
+		// a field filled in another language (e.g. before a translation arrived)
+		// is regenerated from the current content.
+		$content_lang = OCSM_Language::detect_text( wp_strip_all_tags( strip_shortcodes( $post->post_content ) ) );
+
 		// Excerpt (WordPress core field).
-		if ( empty( trim( (string) $post->post_excerpt ) ) ) {
-			$excerpt = self::generate_excerpt( $post->post_content );
-			if ( '' !== $excerpt ) {
+		$excerpt = trim( (string) $post->post_excerpt );
+		$regenerate = '' === $excerpt;
+		if ( ! $regenerate && $content_lang ) {
+			$excerpt_lang = OCSM_Language::detect_text( $excerpt );
+			$regenerate = '' !== $excerpt_lang && $excerpt_lang !== $content_lang;
+		}
+		if ( $regenerate ) {
+			$new_excerpt = self::generate_excerpt( $post->post_content );
+			if ( '' !== $new_excerpt && $new_excerpt !== $excerpt ) {
 				wp_update_post( array(
 					'ID'           => $post->ID,
-					'post_excerpt' => $excerpt,
+					'post_excerpt' => $new_excerpt,
 				) );
-				$post->post_excerpt = $excerpt;
+				$post->post_excerpt = $new_excerpt;
 				$filled++;
 			}
 		}
@@ -118,13 +129,23 @@ class OCSM_SEO_Fill {
 		// SEO plugin fields.
 		$description = self::generate_description( $post );
 		foreach ( self::seo_plugins() as $keys ) {
-			$title = get_post_meta( $post->ID, $keys['title'], true );
-			if ( '' === trim( (string) $title ) && ! empty( $post->post_title ) ) {
+			$title = trim( (string) get_post_meta( $post->ID, $keys['title'], true ) );
+			$title_stale = '' === $title;
+			if ( ! $title_stale && $content_lang && ! empty( $post->post_title ) && $title !== $post->post_title ) {
+				$title_lang = OCSM_Language::detect_text( $title );
+				$title_stale = '' !== $title_lang && $title_lang !== $content_lang;
+			}
+			if ( $title_stale && ! empty( $post->post_title ) ) {
 				update_post_meta( $post->ID, $keys['title'], $post->post_title );
 				$filled++;
 			}
-			$desc = get_post_meta( $post->ID, $keys['desc'], true );
-			if ( '' === trim( (string) $desc ) && '' !== $description ) {
+			$desc = trim( (string) get_post_meta( $post->ID, $keys['desc'], true ) );
+			$desc_stale = '' === $desc;
+			if ( ! $desc_stale && $content_lang ) {
+				$desc_lang = OCSM_Language::detect_text( $desc );
+				$desc_stale = '' !== $desc_lang && $desc_lang !== $content_lang;
+			}
+			if ( $desc_stale && '' !== $description ) {
 				update_post_meta( $post->ID, $keys['desc'], $description );
 				$filled++;
 			}
