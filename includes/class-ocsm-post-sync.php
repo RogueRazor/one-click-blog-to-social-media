@@ -10,7 +10,6 @@ class OCSM_Post_Sync {
 		add_action( 'transition_post_status', array( __CLASS__, 'on_transition' ), 10, 3 );
 		add_filter( 'post_row_actions', array( __CLASS__, 'row_action' ), 10, 2 );
 		add_action( 'admin_init', array( __CLASS__, 'handle_manual_post' ) );
-		add_action( 'ocsm_cross_post_event', array( __CLASS__, 'sync_post' ) );
 	}
 
 	private static function settings() {

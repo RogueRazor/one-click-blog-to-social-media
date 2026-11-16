@@ -2,7 +2,7 @@
 /**
  * Plugin Name: One Click Blog to Social Media
  * Description: Automatically cross-posts published articles to your Google Business Profile and social media (Facebook Pages, and more) from one plugin.
- * Version: 1.5.3
+ * Version: 1.5.4
  * Author: RogueRazor
  * License: GPL-2.0-or-later
  * Text Domain: one-click-blog-to-social-media
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OCSM_VERSION', '1.5.3' );
+define( 'OCSM_VERSION', '1.5.4' );
 define( 'OCSM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OCSM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -71,6 +71,13 @@ final class OCSM_Plugin {
 		OCSM_Updater::init();
 OCSM_Hashtag_Suggestions::init();
 OCSM_SEO_Fill::init();
+
+// On plugin update, purge any leftover background cross-post jobs
+// from earlier versions; posting is synchronous again.
+if ( get_option( 'ocsm_version' ) !== OCSM_VERSION ) {
+	wp_clear_scheduled_hook( 'ocsm_cross_post_event' );
+	update_option( 'ocsm_version', OCSM_VERSION );
+}
 	}
 }
 
